@@ -5,6 +5,9 @@ import peripherals
 # App Name
 NAME = "Countdown"
 
+# App Icon
+ICON: str = "A:apps/countdown/resources/icon.png"
+
 # LVGL widgets
 scr = None
 label = None
@@ -12,69 +15,69 @@ arc = None
 
 # Countdown parameters
 DEFAULT_REMAINDER = 30
-remainder = DEFAULT_REMAINDER
+remainder = [DEFAULT_REMAINDER]
+remainder_index = 0
+remaining_time = DEFAULT_REMAINDER
 
 app_mgr = None
 last_recorded_time = 0
 total_seconds = 0
 countdown_is_running = False
 
-ARC_COLORS = {
-    'green': lv.palette_main(lv.PALETTE.GREEN),
-    'yellow': lv.palette_main(lv.PALETTE.YELLOW),
-    'red': lv.palette_main(lv.PALETTE.RED)
-}
-
 def get_settings_json():
     return {
         "form": [{
             "type": "input",
             "default": str(DEFAULT_REMAINDER),
-            "caption": "Countdown Timer Duration(s)",
+            "caption": "Countdown Timer Duration(s), comma separated",
             "name": "remainder",
-            "attributes": {"maxLength": 6, "placeholder": "e.g., 300"},
+            "attributes": {"maxLength": 40, "placeholder": "e.g., 300"},
         }]
     }
 
 def reset_countdown():
-    global remainder, countdown_is_running, last_recorded_time, total_seconds
+    global remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds
     last_recorded_time = 0
     countdown_is_running = False
-    remainder = int(app_mgr.config().get("remainder", DEFAULT_REMAINDER))
-    total_seconds = remainder
+    remainder = app_mgr.config().get("remainder", DEFAULT_REMAINDER).split(",")
+    total_seconds = int(remainder[remainder_index])
+    remaining_time = total_seconds
 
 def update_label():
-    global label, arc, remainder
+    global label, remaining_time
     if label:
-        label.set_text("{:02d}:{:02d}".format(remainder // 60, remainder % 60))        
+        label.set_text("{:02d}:{:02d}".format(remaining_time // 60, remaining_time % 60))        
 
 def update_arc(percent):
     arc.set_value(percent)
     if percent > 30:
-        arc.set_style_arc_color(ARC_COLORS['green'], lv.PART.INDICATOR)
+        arc.set_style_arc_color(lv.palette_main(lv.PALETTE.GREEN), lv.PART.INDICATOR)
+        arc.set_style_bg_color(lv.palette_lighten(lv.PALETTE.GREEN, 2), lv.PART.KNOB)
+    elif percent > 15:
+        arc.set_style_arc_color(lv.palette_main(lv.PALETTE.YELLOW), lv.PART.INDICATOR)
+        arc.set_style_bg_color(lv.palette_lighten(lv.PALETTE.YELLOW, 2), lv.PART.KNOB)
     else:
-        if percent > 15:
-            arc.set_style_arc_color(ARC_COLORS['yellow'], lv.PART.INDICATOR)
-        else:
-            arc.set_style_arc_color(ARC_COLORS['red'], lv.PART.INDICATOR)
+        arc.set_style_arc_color(lv.palette_main(lv.PALETTE.RED), lv.PART.INDICATOR)
+        arc.set_style_bg_color(lv.palette_lighten(lv.PALETTE.RED, 2), lv.PART.KNOB)
             
 def update_ambient_color(percent):
     if percent > 30:
         peripherals.ambient_light.set_color([(0, 255, 0)], True)
+    elif percent > 15:
+        peripherals.ambient_light.set_color([(255, 255, 0)], True)
     else:
-        if percent > 15:
-            peripherals.ambient_light.set_color([(255, 255, 0)], True)
-        else:
-            peripherals.ambient_light.set_color([(255, 0, 0)], True)
+        peripherals.ambient_light.set_color([(255, 0, 0)], True)
     peripherals.ambient_light.brightness(100)
     
 
 def event_handler(event):
+    global countdown_is_running, app_mgr
     e_code = event.get_code()
     if e_code == lv.EVENT.KEY:
         e_key = event.get_key()
+
         if e_key == lv.KEY.ENTER:
-            global countdown_is_running, last_recorded_time
+            global last_recorded_time
             last_recorded_time = time.ticks_ms()
             countdown_is_running = not countdown_is_running
             if countdown_is_running:
@@ -82,7 +85,32 @@ def event_handler(event):
             else:
                 peripherals.ambient_light.release()
             print(countdown_is_running)
-
+            
+        if not countdown_is_running:
+            global remainder_index
+            if e_key == lv.KEY.LEFT:
+                remainder_index = remainder_index + 1
+                if remainder_index >= len(remainder):
+                    remainder_index = 0
+                reset_countdown()
+                update_label()
+            if e_key == lv.KEY.RIGHT:
+                remainder_index = remainder_index - 1
+                if remainder_index < 0:
+                    remainder_index = len(remainder) -1
+                reset_countdown()
+                update_label()
+                
+#        if e_key == lv.KEY.ESC:
+#            global total_seconds, remaining_time
+#            if total_seconds != remaining_time:
+#                reset_countdown()
+#                update_label()
+#                update_arc(100)
+#            else:
+#                await app_mgr.exit()
+                
+                
 async def on_boot(apm):
     global app_mgr
     app_mgr = apm
@@ -100,6 +128,8 @@ async def on_start():
     print('on start')
     global scr, label, arc
     reset_countdown()
+    global remainder
+    print(remainder)
 
     scr = lv.obj()
     lv.scr_load(scr)
@@ -130,18 +160,18 @@ async def on_start():
 
 async def on_running_foreground():
     """Called when the app is active, approximately every 200ms."""
-    global remainder, last_recorded_time, countdown_is_running
+    global remaining_time, last_recorded_time, countdown_is_running
     
-    if not countdown_is_running or remainder <= 0:
+    if not countdown_is_running or remaining_time <= 0:
         return
 
     current_time = time.ticks_ms()
     elapsed_time = time.ticks_diff(current_time, last_recorded_time) // 1000
     if elapsed_time > 0:
-        remainder -= elapsed_time
+        remaining_time -= elapsed_time
         last_recorded_time = current_time
-        remainder = max(remainder, 0)  
-        percent = int(remainder * 100 / total_seconds)
+        remaining_time = max(remaining_time, 0)  
+        percent = int(remaining_time * 100 / total_seconds)
         update_label()
         update_arc(percent)
         update_ambient_color(percent)
