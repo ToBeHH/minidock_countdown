@@ -20,9 +20,11 @@ remainder_index = 0
 remaining_time = DEFAULT_REMAINDER
 
 app_mgr = None
-last_recorded_time = 0
+last_displayed_time = 0
 total_seconds = 0
 countdown_is_running = False
+start_time_ms = 0
+start_time_value = 0
 
 def get_settings_json():
     return {
@@ -77,11 +79,13 @@ def event_handler(event):
         e_key = event.get_key()
 
         if e_key == lv.KEY.ENTER:
-            global last_recorded_time
-            last_recorded_time = time.ticks_ms()
+            global last_displayed_time, start_time_ms, start_time_value
             countdown_is_running = not countdown_is_running
             if countdown_is_running:
                 peripherals.ambient_light.acquire()
+                start_time_ms = time.ticks_ms()
+                last_displayed_time = remaining_time
+                start_time_value = remaining_time
             else:
                 peripherals.ambient_light.release()
             print(countdown_is_running)
@@ -160,17 +164,16 @@ async def on_start():
 
 async def on_running_foreground():
     """Called when the app is active, approximately every 200ms."""
-    global remaining_time, last_recorded_time, countdown_is_running
+    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time
     
     if not countdown_is_running or remaining_time <= 0:
         return
 
     current_time = time.ticks_ms()
-    elapsed_time = time.ticks_diff(current_time, last_recorded_time) // 1000
-    if elapsed_time > 0:
-        remaining_time -= elapsed_time
-        last_recorded_time = current_time
-        remaining_time = max(remaining_time, 0)  
+    elapsed_time = time.ticks_diff(current_time, start_time_ms) // 1000
+    remaining_time = max(start_time_value - elapsed_time, 0)
+    if remaining_time != last_displayed_time:
+        last_displayed_time = remaining_time  
         percent = int(remaining_time * 100 / total_seconds)
         update_label()
         update_arc(percent)
