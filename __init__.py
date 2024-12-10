@@ -88,7 +88,7 @@ def reset_countdown():
 
     last_recorded_time = 0
     countdown_is_running = False
-    remainder = app_mgr.config().get("remainder", DEFAULT_REMAINDER).split(",")
+    remainder = app_mgr.config().get("remainder", str(DEFAULT_REMAINDER)).split(",")
     print(remainder)
     total_seconds = int(remainder[remainder_index])
     remaining_time = total_seconds

@@ -16,3 +16,4 @@ system_requirements:
 files:
     include:
         - __init__.py
+        - resources/icon.png
