@@ -140,7 +140,9 @@ async def on_start():
 
     label = lv.label(scr)
     label.set_text("--:--")
-    # label.set_style_text_font(lv.font_montserrat_48, 0)  # Increase font size
+    # Increase font size
+    # see https://discuss.myvobot.com/t/how-to-increase-font-size-of-a-label/165/2 for available fonts
+    label.set_style_text_font(lv.font_ascii_bold_48, 0) 
     label.center()
     
     arc = lv.arc(scr)
