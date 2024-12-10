@@ -8,32 +8,40 @@ NAME = "Countdown"
 # App Icon
 ICON: str = "A:apps/countdown/resources/icon.png"
 
-# LVGL widgets
-scr = None
-label = None
-arc = None
-bar = None
+# LVGL widgets for UI elements
+scr = None  # Main screen object
+label = None  # Label to display countdown time
+arc = None  # Arc widget for circular progress
+bar = None  # Bar widget for linear progress
 
-# Countdown parameters
-DEFAULT_REMAINDER = 30
-remainder = [DEFAULT_REMAINDER]
-remainder_index = 0
-remaining_time = DEFAULT_REMAINDER
-use_clock = False
-ambient_light = True
-time_display = 1
+# Countdown configuration parameters
+DEFAULT_REMAINDER = 30  # Default countdown duration in seconds
+remainder = [DEFAULT_REMAINDER]  # List of countdown durations
+remainder_index = 0  # Current index in remainder list
+remaining_time = DEFAULT_REMAINDER  # Current remaining time
+use_clock = False  # Whether to use LED clock display
+ambient_light = True  # Whether to use ambient light indicators
+time_display = 1  # Display mode (1=bar, 2=arc)
 
-app_mgr = None
-last_displayed_time = 0
-total_seconds = 0
-countdown_is_running = False
-start_time_ms = 0
-start_time_value = 0
+# App state variables
+app_mgr = None  # App manager instance
+last_displayed_time = 0  # Last displayed countdown time
+total_seconds = 0  # Total duration of current countdown
+countdown_is_running = False  # Whether countdown is active
+start_time_ms = 0  # Start time in milliseconds
+start_time_value = 0  # Initial countdown value
 
+# LED segment display patterns for digits 0-9
 NUMBER = [0x5F, 0x06, 0x3B, 0x2F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F]
 
 
 def get_settings_json():
+    """
+    Returns the settings configuration for the app UI. Includes input for duration, 
+    switches for clock/ambient light, and display mode selection.
+
+    See https://dock.myvobot.com/developer/reference/web-page/ for reference.
+    """
     return {
         "form": [
             {
@@ -72,6 +80,10 @@ def get_settings_json():
 
 
 def reset_countdown():
+    """
+    Resets the countdown timer to initial state.
+    Loads settings from app config and initializes countdown parameters
+    """
     global remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds, use_clock, ambient_light, time_display
 
     last_recorded_time = 0
@@ -86,6 +98,11 @@ def reset_countdown():
 
 
 def update_label():
+    """
+    Updates the time display label with current remaining time.
+
+    Formats time as MM:SS
+    """
     global label, remaining_time
     if label:
         label.set_text(
@@ -94,6 +111,10 @@ def update_label():
 
 
 def update_clock(remaining_time):
+    """
+    Updates the LED clock display with current remaining time.
+    Sets individual LED segments for each digit and brightness.
+    """
     minutes = remaining_time // 60
     seconds = remaining_time % 60
 
@@ -101,7 +122,7 @@ def update_clock(remaining_time):
     peripherals.led_clock.set_display(1, NUMBER[minutes // 10])
     peripherals.led_clock.set_display(2, NUMBER[minutes % 10])
     peripherals.led_clock.set_display(3, NUMBER[seconds // 10])
-    peripherals.led_clock.set_display(4, NUMBER[seconds % 10] | 0x80)
+    peripherals.led_clock.set_display(4, NUMBER[seconds % 10] | 0x80) # Show the : between minute and second
     peripherals.led_clock.set_display(5, 0x00)
     peripherals.led_clock.set_display(6, 0x00)
 
@@ -110,6 +131,10 @@ def update_clock(remaining_time):
 
 
 def update_arc(percent):
+    """
+    Updates the arc progress indicator with remaining percentage.
+    Changes color based on remaining time thresholds.
+    """
     global arc
     arc.set_value(percent)
     if percent > 30:
@@ -124,6 +149,9 @@ def update_arc(percent):
 
 
 def update_bar(percent):
+    """
+    Updates the progress bar with remaining percentage. Changes color based on remaining time thresholds.
+    """
     global bar
     bar.set_value(100 - percent, lv.ANIM.ON)
     if percent > 30:
@@ -135,6 +163,9 @@ def update_bar(percent):
 
 
 def update_ambient_color(percent):
+    """
+    Updates the ambient light color based on remaining percentage
+    """
     if percent > 30:
         peripherals.ambient_light.set_color([(0, 255, 0)], True)
     elif percent > 15:
@@ -145,6 +176,11 @@ def update_ambient_color(percent):
 
 
 def event_handler(event):
+    """
+    Handles UI input events:
+     * ENTER starts/stops countdown
+     * LEFT/RIGHT changes timer duration when stopped
+    """
     global countdown_is_running, app_mgr
     e_code = event.get_code()
     if e_code == lv.EVENT.KEY:
@@ -195,11 +231,17 @@ def event_handler(event):
 
 
 async def on_boot(apm):
+    """
+    Initializes app manager on boot.
+    """
     global app_mgr
     app_mgr = apm
 
 
 async def on_stop():
+    """
+    Cleanup when app stops. Removes screen and resets countdown.
+    """
     print("on stop")
     global scr
     if scr:
@@ -210,6 +252,10 @@ async def on_stop():
 
 
 async def on_start():
+    """
+    Initializes UI when app starts.
+    Creates screen, progress indicator (bar/arc) and time label.
+    """
     print("on start")
     global scr, label, arc, bar, time_display
     reset_countdown()
@@ -262,7 +308,10 @@ async def on_start():
 
 
 async def on_running_foreground():
-    """Called when the app is active, approximately every 200ms."""
+    """
+    Main app loop that runs while app is active.
+    Updates countdown time and display elements every 200ms.
+    """
     global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time, use_clock, ambient_light, time_display
 
     if not countdown_is_running or remaining_time <= 0:
