@@ -20,6 +20,7 @@ remainder = [DEFAULT_REMAINDER]
 remainder_index = 0
 remaining_time = DEFAULT_REMAINDER
 use_clock = False
+ambient_light = True
 
 app_mgr = None
 last_displayed_time = 0
@@ -41,30 +42,37 @@ def get_settings_json():
         }, { 
             "type": "switch",
             "default": "false",
-            "caption": "Use big clock display?",
+            "caption": "Use big clock display for countdown?",
             "name": "use_clock",
-            "options": [ "keep clock", "show countdown as clock" ]
+            "tip": "Use the big clock to display the countdown or do you want to see the current time?"
+        },{ 
+            "type": "switch",
+            "default": "true",
+            "caption": "Use ambient light?",
+            "name": "ambient_light",
+            "tip": "If on, the ambient light shows, if you are getting close to the end. At 30% remaining time it switches to yellow and at 15% it switches to red."
         }]
     }
 
 def reset_countdown():
-    global remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds, use_clock
+    global remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds, use_clock, ambient_light
+
     last_recorded_time = 0
     countdown_is_running = False
     remainder = app_mgr.config().get("remainder", DEFAULT_REMAINDER).split(",")
     print(remainder)
     total_seconds = int(remainder[remainder_index])
     remaining_time = total_seconds
-    
-    use_clock = app_mgr.config().get("use_clock", None)
-    print(use_clock)
+    use_clock = app_mgr.config().get("use_clock", False)
+    ambient_light = app_mgr.config().get("ambient_light", True)
+
 
 def update_label():
     global label, remaining_time
     if label:
         label.set_text("{:02d}:{:02d}".format(remaining_time // 60, remaining_time % 60))
         
-def update_clock(remaining_time, tick):
+def update_clock(remaining_time):
     minutes = remaining_time // 60
     seconds = remaining_time % 60
     
@@ -72,9 +80,9 @@ def update_clock(remaining_time, tick):
     peripherals.led_clock.set_display(1, NUMBER[minutes // 10])
     peripherals.led_clock.set_display(2, NUMBER[minutes % 10])
     peripherals.led_clock.set_display(3, NUMBER[seconds // 10])
-    peripherals.led_clock.set_display(4, NUMBER[seconds % 10])
+    peripherals.led_clock.set_display(4, NUMBER[seconds % 10] | 0x80)
     peripherals.led_clock.set_display(5, 0x00)
-    peripherals.led_clock.set_display(6, 0x01)
+    peripherals.led_clock.set_display(6, 0x00)
 
     # Set LED clock brightness
     peripherals.led_clock.brightness(100)
@@ -94,13 +102,13 @@ def update_arc(percent):
         
 def update_bar(percent):
     global bar
-    bar.set_value(100-percent, 100)
-    #if percent > 30:
-    #    bar.set_style_bar_color(lv.palette_main(lv.PALETTE.GREEN), lv.PART.BG)
-    #elif percent > 15:
-    #    bar.set_style_bar_color(lv.palette_main(lv.PALETTE.YELLOW), lv.PART.BG)
-    #else:
-    #    bar.set_style_bar_color(lv.palette_main(lv.PALETTE.RED), lv.PART.BG)
+    bar.set_value(100-percent, lv.ANIM.ON)
+    if percent > 30:
+        bar.set_style_bg_color(lv.palette_main(lv.PALETTE.GREEN), lv.PART.INDICATOR)
+    elif percent > 15:
+        bar.set_style_bg_color(lv.palette_main(lv.PALETTE.YELLOW), lv.PART.INDICATOR)
+    else:
+        bar.set_style_bg_color(lv.palette_main(lv.PALETTE.RED), lv.PART.INDICATOR)
             
 def update_ambient_color(percent):
     if percent > 30:
@@ -119,19 +127,21 @@ def event_handler(event):
         e_key = event.get_key()
 
         if e_key == lv.KEY.ENTER:
-            global last_displayed_time, start_time_ms, start_time_value, use_clock
+            global last_displayed_time, start_time_ms, start_time_value, use_clock, ambient_light
             countdown_is_running = not countdown_is_running
             if countdown_is_running:
-                peripherals.ambient_light.acquire()
                 start_time_ms = time.ticks_ms()
                 last_displayed_time = remaining_time
                 start_time_value = remaining_time
+                if ambient_light:
+                    peripherals.ambient_light.acquire()
                 if use_clock:
                     peripherals.led_clock.acquire()
             else:
-                peripherals.ambient_light.release()
                 if use_clock:
                     peripherals.led_clock.release()
+                if ambient_light:
+                    peripherals.ambient_light.release()
             print(countdown_is_running)
             
         if not countdown_is_running:
@@ -179,31 +189,39 @@ async def on_start():
 
     scr = lv.obj()
     lv.scr_load(scr)
-
-    label = lv.label(scr)
-    label.set_text("--:--")
-    # label.set_style_text_font(lv.font_montserrat_48, 0)  # Increase font size
-    label.center()
     
     if use_clock:
         bar = lv.bar(scr)
-        bar.set_size(320,240)
-        # bar.align(None,lv.ALIGN.CENTER,0,0)
-        bar.set_range(0,100)
-        # bar.set_anim_time(2000)
-        bar.set_value(100, 100)
+        bar.set_size(320, 240)
+        bar.set_range(0, 100)
+        bar.set_value(10, lv.ANIM.OFF)
+        bar.set_style_bg_color(lv.palette_main(lv.PALETTE.GREEN), lv.PART.INDICATOR)
+        bar.set_style_radius(0, lv.PART.MAIN)
+        bar.set_style_radius(0, lv.PART.INDICATOR)
     else:
         arc = lv.arc(scr)
         arc.set_size(200, 200)
         arc.center()
         arc.set_rotation(270)
         arc.set_range(0, 100)
-        arc.set_bg_angles(0,360)
-        arc.set_angles(0,360)
+        arc.set_bg_angles(0, 360)
+        arc.set_angles(0, 360)
+
+    label = lv.label(scr)
+    label.set_text("--:--")
+    if use_clock:
+        # Increase font size
+        # see https://discuss.myvobot.com/t/how-to-increase-font-size-of-a-label/165/2 for available fonts
+        label.set_style_text_font(lv.font_numbers_92, 0) 
+        label.center()
+    else:
+        # Increase font size
+        # see https://discuss.myvobot.com/t/how-to-increase-font-size-of-a-label/165/2 for available fonts
+        label.set_style_text_font(lv.font_ascii_bold_48, 0) 
 
     update_label()
     if use_clock:
-        update_bar(0)
+        update_bar(100)
     else:
         update_arc(100)
 
@@ -217,7 +235,7 @@ async def on_start():
 
 async def on_running_foreground():
     """Called when the app is active, approximately every 200ms."""
-    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time
+    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time, use_clock, ambient_light
     
     if not countdown_is_running or remaining_time <= 0:
         return
@@ -229,12 +247,14 @@ async def on_running_foreground():
         last_displayed_time = remaining_time  
         percent = int(remaining_time * 100 / total_seconds)
         update_label()
+
         if use_clock:
             update_clock(remaining_time)
             update_bar(percent)
         else:
             update_arc(percent)
-        update_ambient_color(percent)
-    
+
+        if ambient_light:
+            update_ambient_color(percent)
 
 
