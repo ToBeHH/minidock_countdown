@@ -18,6 +18,7 @@ DEFAULT_REMAINDER = 30
 remainder = [DEFAULT_REMAINDER]
 remainder_index = 0
 remaining_time = DEFAULT_REMAINDER
+ambient_light = True
 
 app_mgr = None
 last_displayed_time = 0
@@ -34,16 +35,23 @@ def get_settings_json():
             "caption": "Countdown Timer Duration(s), comma separated",
             "name": "remainder",
             "attributes": {"maxLength": 40, "placeholder": "e.g., 300"},
+        },{ 
+            "type": "switch",
+            "default": "true",
+            "caption": "Use ambient light?",
+            "name": "ambient_light",
+            "tip": "If on, the ambient light shows, if you are getting close to the end. At 30% remaining time it switches to yellow and at 15% it switches to red."
         }]
     }
 
 def reset_countdown():
-    global remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds
+    global remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds, ambient_light
     last_recorded_time = 0
     countdown_is_running = False
     remainder = app_mgr.config().get("remainder", DEFAULT_REMAINDER).split(",")
     total_seconds = int(remainder[remainder_index])
     remaining_time = total_seconds
+    ambient_light = app_mgr.config().get("ambient_light", True)
 
 def update_label():
     global label, remaining_time
@@ -79,15 +87,17 @@ def event_handler(event):
         e_key = event.get_key()
 
         if e_key == lv.KEY.ENTER:
-            global last_displayed_time, start_time_ms, start_time_value
+            global last_displayed_time, start_time_ms, start_time_value, ambient_light
             countdown_is_running = not countdown_is_running
             if countdown_is_running:
-                peripherals.ambient_light.acquire()
                 start_time_ms = time.ticks_ms()
                 last_displayed_time = remaining_time
                 start_time_value = remaining_time
+                if ambient_light:
+                    peripherals.ambient_light.acquire()
             else:
-                peripherals.ambient_light.release()
+                if ambient_light:
+                    peripherals.ambient_light.release()
             print(countdown_is_running)
             
         if not countdown_is_running:
@@ -166,7 +176,7 @@ async def on_start():
 
 async def on_running_foreground():
     """Called when the app is active, approximately every 200ms."""
-    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time
+    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time, ambient_light
     
     if not countdown_is_running or remaining_time <= 0:
         return
@@ -179,5 +189,6 @@ async def on_running_foreground():
         percent = int(remaining_time * 100 / total_seconds)
         update_label()
         update_arc(percent)
-        update_ambient_color(percent)
+        if ambient_light:
+            update_ambient_color(percent)
 
