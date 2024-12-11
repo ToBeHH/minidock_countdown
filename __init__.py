@@ -6,7 +6,10 @@ import peripherals
 NAME = "Countdown"
 
 # App Icon
-ICON: str = "A:apps/countdown/resources/icon.png"
+ICON = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00.\x00\x00\x00.\x08\x03\x00\x00\x00`g\xdb\x05\x00\x00\x00\x9cPLTE\x00\x00\x00L\xafP\xff\xff\xff\xfa\xfc\xfaN\xb0R\xf6\xfa\xf6\xdd\xeb\xdd\xee\xf5\xef\xcb\xe1\xcc\xc7\xdf\xc9]\xb3a\xf1\xf7\xf1\xab\xd1\xad\x96\xc7\x98\xed\xf4\xed\xd4\xe6\xd4\xd0\xe4\xd1\xce\xe3\xcf\xb8\xd8\xba\xb4\xd5\xb5\xae\xd2\xaf\x8c\xc3\x8e}\xbe\x80\xe4\xef\xe5\xda\xe9\xda\x9d\xca\x9fx\xbc{r\xbauQ\xb0U\xf3\xf8\xf3\xea\xf3\xea\xc2\xdc\xc3\xbc\xd9\xbd\xa8\xcf\xa9\xa3\xcd\xa4u\xbaw\xe6\xf0\xe6\x86\xc1\x88\x83\xc0\x85m\xb8pc\xb5fX\xb2[\xfc\xfe\xfc\xe7\xf1\xe7\xe0\xed\xe1\xd6\xe7\xd6\xc5\xde\xc6\xbe\xdb\xbf\x9f\xcb\xa1\x9b\xc9\x9d\x93\xc6\x94V\xb2Z\xc6z(P\x00\x00\x00\x01tRNS\x00@\xe6\xd8f\x00\x00\x01\xc8IDATH\xc7\x9d\x95\xd7r\x830\x10E\xbdW\xf4jz\x89{\x89\x9d\xde\xfe\xff\xdf\x12b4\x92\x12\xa1xr\x1e\x98a9\x88E,\xbb\xb3\x9f\x90\xc2\xcc\x08i\x98\x96'\x98\xb4\xaf\xf7\xc9\xc8\xb4\x1d\xaf\x9d\x04_,\x1f\xa3\t_\xd8\xe7\xb5\r\x01I\xe8\xec\x92\rV\xf8\xf4\\\x14\xfe\xd3\xca\xff\x8a\xbc\xe6\x96\xf0U;p\x86\x1c6{\x12\xdc0\xdc\xfeZ\x7f\xbc\x94\x00,\xbf#\x19\x0f\x0eqT\xfb\x14\x02\xcd\x9eT6n/Nd\xfb\xa3\x01\xe6\x16\xe9\xa8\xbd\x1b\xc9\xe7\x8f\xc5\x9c\xb4\xc4\x0c\x85\xd0\xc7\x18\xd0,\xf4\xba\x0b'\xa0\x0b\\\xb7\x12\xb0\x9e\xf4\xec\xf8^\n}\x0b\xe4\xf47<\x97\x15\xec\xc0\xe4\xdd\xbe\x8d>\r\x1c\x01\xdf \x1f\x13\xa0\x96\xf4\x17\xa02\xe8%l_^\xdd\x01#\x89\xd3:\x8b\xac\xcb\x16X\xdf\xc7\xea\x8ed\xdd\xc5\x83d\xefm\x00MzX\xb9\xf7\x08EX\xe8@J\x82\x0c\x02G\xa7\xab_\xf40\xaa\xac\x8dN\x97H\xe5\xcd\xb7\x93\xba\x87\x81\xac\x13\xc5\xf9\x000%\xf7V.\xf2\x10?\n\xa8*\x8aX\xd2\x1f\x91\x90\xc4\xb9\xf4\xdfH\x03\xd7\xd7\xc0\x99TLz\x0c\xecL%\xd0-\x14\x9dl8\x06=\x81](\xba\x07\xd4\xd3z\xe4\xc2QJ\xb2\x07Z2\xd0\x07J\xbdS\xca\xb37\"\xba\x06\x03\xd3\xa7S\x1ebI\xe7~\t\x84\xbdN\x7f\x06\"\xb9s\x88\xc2Z\xf2\xa2\xdf\xad\xda\x8e\xff\xa0\x96\x8fV\xd3h\xac\x14`\x9b\x05\x7f\x13\xd8\x19O\xa2\x0etm\x8c|\x00n4\xdc\xb0\xc17\xb6\xb7\xd7\xf5`\x1e\xe8\x96\x83\x93n\x8f\xaf\x18i4\xba\xf0\x83\xdc\x86\x82gn\xf0\x14l\x1d&\xeclr|\x08\x16U\xe9\x87\x18\xc8\xaf\x18N\xbc\x93\xe0>\xbaz\xf6u\x00{\xbf~\xb0\x06\xa1[\xffon\xcf\x8c\x98\xddOw-\x19\x84\x8bn:\xe1\x00\x00\x00\x00IEND\xaeB`\x82"
+
+# Handle the ESC key inside the app
+CAN_BE_AUTO_SWITCHED = False
 
 # LVGL widgets for UI elements
 scr = None  # Main screen object
@@ -37,7 +40,7 @@ NUMBER = [0x5F, 0x06, 0x3B, 0x2F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F]
 
 def get_settings_json():
     """
-    Returns the settings configuration for the app UI. Includes input for duration, 
+    Returns the settings configuration for the app UI. Includes input for duration,
     switches for clock/ambient light, and display mode selection.
 
     See https://dock.myvobot.com/developer/reference/web-page/ for reference.
@@ -122,7 +125,9 @@ def update_clock(remaining_time):
     peripherals.led_clock.set_display(1, NUMBER[minutes // 10])
     peripherals.led_clock.set_display(2, NUMBER[minutes % 10])
     peripherals.led_clock.set_display(3, NUMBER[seconds // 10])
-    peripherals.led_clock.set_display(4, NUMBER[seconds % 10] | 0x80) # Show the : between minute and second
+    peripherals.led_clock.set_display(
+        4, NUMBER[seconds % 10] | 0x80
+    )  # Show the : between minute and second
     peripherals.led_clock.set_display(5, 0x00)
     peripherals.led_clock.set_display(6, 0x00)
 
@@ -180,11 +185,14 @@ def event_handler(event):
     Handles UI input events:
      * ENTER starts/stops countdown
      * LEFT/RIGHT changes timer duration when stopped
+     * ESC resets countdown or exits app
     """
-    global countdown_is_running, app_mgr
+    global countdown_is_running, app_mgr, remaining_time
     e_code = event.get_code()
+    
     if e_code == lv.EVENT.KEY:
         e_key = event.get_key()
+        print(f"Got key {e_key}")
 
         if e_key == lv.KEY.ENTER:
             global last_displayed_time, start_time_ms, start_time_value, use_clock, ambient_light
@@ -202,7 +210,7 @@ def event_handler(event):
                     peripherals.led_clock.release()
                 if ambient_light:
                     peripherals.ambient_light.release()
-            print(countdown_is_running)
+            print(f"Countdown is still running? {countdown_is_running}")
 
         if not countdown_is_running:
             global remainder_index
@@ -219,15 +227,16 @@ def event_handler(event):
                 reset_countdown()
                 update_label()
 
-
-#        if e_key == lv.KEY.ESC:
-#            global total_seconds, remaining_time
-#            if total_seconds != remaining_time:
-#                reset_countdown()
-#                update_label()
-#                update_arc(100)
+        if e_key == lv.KEY.ESC:
+            global total_seconds
+            print("ESC key")
+            if total_seconds != remaining_time:
+                print("resetting countdown")
+                reset_countdown()
+                display_data()
 #            else:
-#                await app_mgr.exit()
+#                print("planned exit")
+#                app_mgr.exit()
 
 
 async def on_boot(apm):
@@ -240,7 +249,7 @@ async def on_boot(apm):
 
 async def on_stop():
     """
-    Cleanup when app stops. Removes screen and resets countdown.
+    Cleanup when app stops. Removes screen.
     """
     print("on stop")
     global scr
@@ -248,7 +257,6 @@ async def on_stop():
         scr.clean()
         scr.del_async()
         scr = None
-    reset_countdown()
 
 
 async def on_start():
@@ -292,11 +300,7 @@ async def on_start():
         label.set_style_text_font(lv.font_ascii_bold_48, 0)
     label.center()
 
-    update_label()
-    if time_display == 1:
-        update_bar(100)
-    else:
-        update_arc(100)
+    display_data()
 
     scr.add_event(event_handler, lv.EVENT.ALL, None)
 
@@ -307,12 +311,32 @@ async def on_start():
         group.set_editing(True)
 
 
+def display_data():
+    """
+    Shows the current remaining time according to the settings
+    """
+    global countdown_is_running, remaining_time, total_seconds, use_clock, ambient_light, time_display
+    percent = int(remaining_time * 100 / total_seconds)
+    update_label()
+
+    if countdown_is_running and use_clock:
+        update_clock(remaining_time)
+
+    if time_display == 1:
+        update_bar(percent)
+    else:
+        update_arc(percent)
+
+    if countdown_is_running and ambient_light:
+        update_ambient_color(percent)
+
+
 async def on_running_foreground():
     """
     Main app loop that runs while app is active.
     Updates countdown time and display elements every 200ms.
     """
-    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time, use_clock, ambient_light, time_display
+    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time
 
     if not countdown_is_running or remaining_time <= 0:
         return
@@ -322,16 +346,4 @@ async def on_running_foreground():
     remaining_time = max(start_time_value - elapsed_time, 0)
     if remaining_time != last_displayed_time:
         last_displayed_time = remaining_time
-        percent = int(remaining_time * 100 / total_seconds)
-        update_label()
-
-        if use_clock:
-            update_clock(remaining_time)
-
-        if time_display == 1:
-            update_bar(percent)
-        else:
-            update_arc(percent)
-
-        if ambient_light:
-            update_ambient_color(percent)
+        display_data()
