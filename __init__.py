@@ -87,7 +87,7 @@ def reset_countdown():
     Resets the countdown timer to initial state.
     Loads settings from app config and initializes countdown parameters
     """
-    global remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds, use_clock, ambient_light, time_display
+    global app_mgr, remainder, remainder_index, remaining_time, countdown_is_running, last_recorded_time, total_seconds, use_clock, ambient_light, time_display
 
     last_recorded_time = 0
     countdown_is_running = False
@@ -98,6 +98,9 @@ def reset_countdown():
     use_clock = app_mgr.config().get("use_clock", False)
     ambient_light = app_mgr.config().get("ambient_light", True)
     time_display = int(app_mgr.config().get("display", "1"))
+    
+    # Allow exiting the app via ESC key
+    app_mgr.enter_root_page()
 
 
 def update_label():
@@ -195,7 +198,7 @@ def event_handler(event):
         print(f"Got key {e_key}")
 
         if e_key == lv.KEY.ENTER:
-            global last_displayed_time, start_time_ms, start_time_value, use_clock, ambient_light
+            global app_mgr, last_displayed_time, start_time_ms, start_time_value, use_clock, ambient_light
             countdown_is_running = not countdown_is_running
             if countdown_is_running:
                 start_time_ms = time.ticks_ms()
@@ -205,6 +208,8 @@ def event_handler(event):
                     peripherals.ambient_light.acquire()
                 if use_clock:
                     peripherals.led_clock.acquire()
+                # Change behaviour of ESC key while countdown is running - reset countdown
+                app_mgr.leave_root_page()
             else:
                 if use_clock:
                     peripherals.led_clock.release()
@@ -229,14 +234,10 @@ def event_handler(event):
 
         if e_key == lv.KEY.ESC:
             global total_seconds
-            print("ESC key")
-            if total_seconds != remaining_time:
-                print("resetting countdown")
-                reset_countdown()
-                display_data()
-#            else:
-#                print("planned exit")
-#                app_mgr.exit()
+            print("ESC key - resetting countdown")
+            reset_countdown()
+            display_data()
+
 
 
 async def on_boot(apm):
@@ -252,11 +253,12 @@ async def on_stop():
     Cleanup when app stops. Removes screen.
     """
     print("on stop")
-    global scr
+    global app_mgr, scr
     if scr:
         scr.clean()
         scr.del_async()
         scr = None
+    app_mgr.exit()
 
 
 async def on_start():
@@ -336,9 +338,14 @@ async def on_running_foreground():
     Main app loop that runs while app is active.
     Updates countdown time and display elements every 200ms.
     """
-    global remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time
+    global app_mgr, remaining_time, start_time_ms, countdown_is_running, start_time_value, last_displayed_time
 
-    if not countdown_is_running or remaining_time <= 0:
+    if not countdown_is_running:
+        return
+    if remaining_time <= 0:
+        countdown_is_running = False
+        # Allow exiting the app via ESC key
+        app_mgr.enter_root_page()
         return
 
     current_time = time.ticks_ms()
