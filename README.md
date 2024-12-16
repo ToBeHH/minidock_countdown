@@ -12,3 +12,4 @@ In addition to the original repo, the following has changed:
    2. You have the remaining time shown as a bar running from left to right, so that you have visual control of how much time is left. The bar also changes color according to how much time is left. 
  * Additionally the remaining time can be shown on the big clokc (configurable via settings).
  * The color for the remaining time can be shown with the ambient lights (configurable via settings).
+ * The ESC key resets the countdown if it has been started.

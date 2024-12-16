@@ -1,6 +1,6 @@
 application:
     name: Countdown
-    version: 1.0.0
+    version: 1.1.0
     description: A small countdown app, which is highly configurable. Can be used as meeting timer as well.
     author: Tobias Schulz-Hess
     author_email: vobot@schulz-hess.de
